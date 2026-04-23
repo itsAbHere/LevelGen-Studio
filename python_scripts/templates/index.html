@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>LevelGen Studio</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #0f0f13;
+            color: #e0e0e0;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: #c8a96e;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+        }
+
+        p.subtitle {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 32px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 16px;
+        }
+
+        textarea {
+            flex: 1;
+            background: #1a1a24;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.9rem;
+            padding: 12px;
+            resize: none;
+            height: 60px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #c8a96e;
+        }
+
+        button {
+            background: #c8a96e;
+            border: none;
+            border-radius: 6px;
+            color: #0f0f13;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            padding: 0 24px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #e0c080;
+        }
+
+        button:disabled {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        #status {
+            color: #888;
+            font-size: 0.8rem;
+            margin-bottom: 20px;
+            height: 16px;
+        }
+
+        #status.error {
+            color: #e05555;
+        }
+
+        #status.warning {
+            color: #e0a030;
+        }
+
+        #status.success {
+            color: #55aa55;
+        }
+
+        canvas {
+            background: #1a1a24;
+            border: 1px solid #2a2a3a;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .legend {
+            display: none;
+            gap: 16px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+
+        .legend-box {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+        }
+
+        #info-panel {
+            display: none;
+            background: #1a1a24;
+            border: 1px solid #2a2a3a;
+            border-radius: 8px;
+            margin-top: 16px;
+            padding: 16px 24px;
+            width: 100%;
+            max-width: 800px;
+            font-size: 0.82rem;
+        }
+
+        #info-panel h2 {
+            color: #c8a96e;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        #info-panel p {
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>⚔ LEVELGEN STUDIO</h1>
+    <p class="subtitle">Narrative-aware level generation for indie games</p>
+
+    <div class="input-row">
+        <textarea id="prompt"
+            placeholder="abandoned castle, player is being hunted, 3 rooms, final room has a boss">abandoned castle, player is being hunted, 3 rooms, final room has a boss</textarea>
+        <button id="btn" onclick="generate()">GENERATE</button>
+    </div>
+
+    <div id="status"></div>
+
+    <canvas id="canvas" width="800" height="320"></canvas>
+
+    <div class="legend" id="legend">
+        <div class="legend-item">
+            <div class="legend-box" style="background:#4caf50"></div>entrance
+        </div>
+        <div class="legend-item">
+            <div class="legend-box" style="background:#5b8dd9"></div>standard
+        </div>
+        <div class="legend-item">
+            <div class="legend-box" style="background:#9e9e9e"></div>corridor
+        </div>
+        <div class="legend-item">
+            <div class="legend-box" style="background:#ffd54f"></div>treasure
+        </div>
+        <div class="legend-item">
+            <div class="legend-box" style="background:#e53935"></div>boss
+        </div>
+    </div>
+
+    <div id="info-panel">
+        <h2 id="level-title"></h2>
+        <p id="level-summary"></p>
+    </div>
+
+    <script>
+        const ROOM_COLORS = {
+            entrance: "#4caf50",
+            standard: "#5b8dd9",
+            corridor: "#9e9e9e",
+            treasure: "#ffd54f",
+            boss: "#e53935"
+        };
+
+        const MOOD_LABELS = {
+            tense: "⚡", dark: "🌑", dramatic: "💥", calm: "🌿", eerie: "👁"
+        };
+
+        async function generate() {
+            const prompt = document.getElementById("prompt").value.trim();
+            if (!prompt) return;
+
+            const btn = document.getElementById("btn");
+            const status = document.getElementById("status");
+            btn.disabled = true;
+            setStatus("Generating level...", "");
+
+            try {
+                const res = await fetch("/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ prompt })
+                });
+
+                const data = await res.json();
+
+                if (data.error) {
+                    setStatus("Error: " + data.error, "error");
+                    return;
+                }
+
+                if (data.warnings && data.warnings.length > 0) {
+                    setStatus("⚠ Warnings: " + data.warnings.join(" | "), "warning");
+                } else {
+                    setStatus("✓ Level generated successfully", "success");
+                }
+
+                drawLevel(data.level);
+                showInfo(data.level);
+
+            } catch (err) {
+                setStatus("Network error: " + err.message, "error");
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function setStatus(msg, cls) {
+            const el = document.getElementById("status");
+            el.textContent = msg;
+            el.className = cls;
+        }
+
+        function drawLevel(level) {
+            const canvas = document.getElementById("canvas");
+            const ctx = canvas.getContext("2d");
+            const rooms = level.rooms;
+            const connections = level.connections;
+
+            const BOX_W = 140;
+            const BOX_H = 80;
+            const PADDING = 40;
+
+            // Resize canvas based on room count
+            canvas.width = Math.max(800, rooms.length * (BOX_W + PADDING) + PADDING);
+            canvas.height = 280;
+            canvas.style.display = "block";
+            document.getElementById("legend").style.display = "flex";
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Calculate positions — lay rooms out horizontally
+            const positions = rooms.map((_, i) => ({
+                x: PADDING + i * (BOX_W + PADDING),
+                y: (canvas.height - BOX_H) / 2
+            }));
+
+            // Draw connections first (behind boxes)
+            ctx.strokeStyle = "#c8a96e";
+            ctx.lineWidth = 2;
+            connections.forEach(([a, b]) => {
+                const from = positions[a];
+                const to = positions[b];
+                if (!from || !to) return;
+
+                const x1 = from.x + BOX_W;
+                const y1 = from.y + BOX_H / 2;
+                const x2 = to.x;
+                const y2 = to.y + BOX_H / 2;
+
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+
+                // Arrowhead
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                const alen = 10;
+                ctx.beginPath();
+                ctx.moveTo(x2, y2);
+                ctx.lineTo(x2 - alen * Math.cos(angle - 0.4), y2 - alen * Math.sin(angle - 0.4));
+                ctx.lineTo(x2 - alen * Math.cos(angle + 0.4), y2 - alen * Math.sin(angle + 0.4));
+                ctx.closePath();
+                ctx.fillStyle = "#c8a96e";
+                ctx.fill();
+            });
+
+            // Draw room boxes
+            rooms.forEach((room, i) => {
+                const { x, y } = positions[i];
+                const color = ROOM_COLORS[room.type] || "#888";
+
+                // Box shadow glow
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 12;
+
+                // Box fill
+                ctx.fillStyle = color + "33"; // semi-transparent fill
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(x, y, BOX_W, BOX_H, 8);
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Room index
+                ctx.fillStyle = "#888";
+                ctx.font = "11px Courier New";
+                ctx.textAlign = "left";
+                ctx.fillText(`#${i}`, x + 8, y + 16);
+
+                // Mood emoji
+                ctx.font = "16px serif";
+                ctx.textAlign = "right";
+                ctx.fillText(MOOD_LABELS[room.mood] || "?", x + BOX_W - 8, y + 18);
+
+                // Room type
+                ctx.fillStyle = color;
+                ctx.font = "bold 13px Courier New";
+                ctx.textAlign = "center";
+                ctx.fillText(room.type.toUpperCase(), x + BOX_W / 2, y + BOX_H / 2 + 2);
+
+                // Enemies
+                ctx.fillStyle = "#aaa";
+                ctx.font = "10px Courier New";
+                ctx.fillText(room.enemies, x + BOX_W / 2, y + BOX_H / 2 + 18);
+
+                // Exits
+                ctx.fillStyle = "#666";
+                ctx.font = "10px Courier New";
+                ctx.textAlign = "right";
+                ctx.fillText(`exits: ${room.exits}`, x + BOX_W - 8, y + BOX_H - 8);
+            });
+        }
+
+        function showInfo(level) {
+            const panel = document.getElementById("info-panel");
+            document.getElementById("level-title").textContent = level.level_title;
+            document.getElementById("level-summary").textContent = level.narrative_summary;
+            panel.style.display = "block";
+        }
+
+        // Allow Ctrl+Enter to generate
+        document.getElementById("prompt").addEventListener("keydown", e => {
+            if (e.key === "Enter" && e.ctrlKey) generate();
+        });
+    </script>
+</body>
+
+</html>
