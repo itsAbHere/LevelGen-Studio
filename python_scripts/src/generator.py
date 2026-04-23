@@ -93,30 +93,64 @@ def save_level(level_data: dict, output_dir: str = "output", filename: Optional[
     return file_path
 
 
+VALID_ROOM_TYPES = {"entrance", "standard", "corridor", "treasure", "boss"}
+VALID_MOODS = {"tense", "dark", "dramatic", "calm", "eerie"}
+VALID_ENEMIES = {"none", "patrol", "guard", "swarm", "boss"}
+
+
 def validate_level(level_data: dict) -> list[str]:
     """
-    Basic sanity checks on the generated level.
+    Sanity checks on the generated level against the agreed contract with Unity side.
     Returns a list of warning strings (empty = all good).
     """
     warnings = []
     rooms = level_data.get("rooms", [])
+    connections = level_data.get("connections", [])
 
     if not rooms:
         warnings.append("No rooms found in level data.")
         return warnings
 
-    room_ids = {r["id"] for r in rooms}
-    boss_rooms = [r for r in rooms if r.get("is_boss_room")]
+    room_count = len(rooms)
 
+    # Check room types and moods
+    types_found = set()
+    for i, room in enumerate(rooms):
+        rtype = room.get("type")
+        mood = room.get("mood")
+        enemies = room.get("enemies")
+
+        if rtype not in VALID_ROOM_TYPES:
+            warnings.append(f"Room {i} has invalid type: '{rtype}'. Must be one of {VALID_ROOM_TYPES}")
+        else:
+            types_found.add(rtype)
+
+        if mood not in VALID_MOODS:
+            warnings.append(f"Room {i} has invalid mood: '{mood}'. Must be one of {VALID_MOODS}")
+
+        if enemies not in VALID_ENEMIES:
+            warnings.append(f"Room {i} has invalid enemies value: '{enemies}'. Must be one of {VALID_ENEMIES}")
+
+    # First room must be entrance
+    if rooms and rooms[0].get("type") != "entrance":
+        warnings.append(f"Room 0 should be type 'entrance', got '{rooms[0].get('type')}'")
+
+    # Exactly one boss room
+    boss_rooms = [i for i, r in enumerate(rooms) if r.get("type") == "boss"]
     if len(boss_rooms) == 0:
         warnings.append("No boss room found.")
     elif len(boss_rooms) > 1:
-        warnings.append(f"Multiple boss rooms found: {[r['id'] for r in boss_rooms]}")
+        warnings.append(f"Multiple boss rooms found at indices: {boss_rooms}")
 
-    # Check all connections point to real rooms
-    for room in rooms:
-        for conn in room.get("connections", []):
-            if conn not in room_ids:
-                warnings.append(f"Room '{room['id']}' connects to unknown room '{conn}'")
+    # Validate connections are valid index pairs
+    for conn in connections:
+        if not (isinstance(conn, list) and len(conn) == 2):
+            warnings.append(f"Invalid connection format: {conn}. Must be a pair like [0, 1]")
+            continue
+        a, b = conn
+        if not (0 <= a < room_count):
+            warnings.append(f"Connection references out-of-range room index: {a}")
+        if not (0 <= b < room_count):
+            warnings.append(f"Connection references out-of-range room index: {b}")
 
     return warnings
