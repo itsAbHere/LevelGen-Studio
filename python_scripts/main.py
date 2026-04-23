@@ -71,13 +71,13 @@ def main():
     print(f"  Rooms   : {len(level_data.get('rooms', []))}")
     print()
 
-    for room in level_data.get("rooms", []):
-        boss_tag = " 👹 [BOSS]" if room.get("is_boss_room") else ""
-        print(f"  [{room['id']}] {room['name']} ({room['type']}){boss_tag}")
-        print(f"       {room['description']}")
-        if room.get("connections"):
-            print(f"       → connects to: {', '.join(room['connections'])}")
-        print()
+    for i, room in enumerate(level_data.get("rooms", [])):
+        boss_tag = " 👹 [BOSS]" if room.get("type") == "boss" else ""
+        print(f"  [Room {i}] type={room['type']}, mood={room['mood']}, enemies={room['enemies']}, exits={room.get('exits', '?')}{boss_tag}")
+
+    conns = level_data.get("connections", [])
+    if conns:
+        print(f"\n  Connections: {conns}")
 
     print("\nFull JSON:")
     print(json.dumps(level_data, indent=2))
