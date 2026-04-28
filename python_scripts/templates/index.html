@@ -254,6 +254,81 @@
             el.className = cls;
         }
 
+        function computePositions(rooms, connections) {
+            const BOX_W = 140;
+            const BOX_H = 80;
+            const H_GAP = 60;  // horizontal gap between columns
+            const V_GAP = 30;  // vertical gap between rows
+
+            // Build adjacency list
+            const adj = Array.from({ length: rooms.length }, () => []);
+            connections.forEach(([a, b]) => adj[a].push(b));
+
+            // BFS from room 0 to assign depth (column) to each room
+            const depth = new Array(rooms.length).fill(-1);
+            const queue = [];
+
+            // Find all entrance rooms as starting points
+            rooms.forEach((r, i) => {
+                if (r.type === "entrance") {
+                    depth[i] = 0;
+                    queue.push(i);
+                }
+            });
+
+            // If no entrance found, just start from 0
+            if (queue.length === 0) {
+                depth[0] = 0;
+                queue.push(0);
+            }
+
+            let head = 0;
+            while (head < queue.length) {
+                const node = queue[head++];
+                adj[node].forEach(neighbor => {
+                    if (depth[neighbor] === -1) {
+                        depth[neighbor] = depth[node] + 1;
+                        queue.push(neighbor);
+                    }
+                });
+            }
+
+            // Any still unvisited rooms get placed at max depth + 1
+            const maxDepth = Math.max(...depth.filter(d => d >= 0));
+            depth.forEach((d, i) => { if (d === -1) depth[i] = maxDepth + 1; });
+
+            // Group rooms by depth
+            const columns = {};
+            depth.forEach((d, i) => {
+                if (!columns[d]) columns[d] = [];
+                columns[d].push(i);
+            });
+
+            // Assign x/y positions
+            const positions = new Array(rooms.length);
+            const numCols = Math.max(...Object.keys(columns).map(Number)) + 1;
+
+            const canvasWidth = numCols * (BOX_W + H_GAP) + H_GAP;
+            const maxColHeight = Math.max(...Object.values(columns).map(c => c.length));
+            const canvasHeight = maxColHeight * (BOX_H + V_GAP) + V_GAP + 40;
+
+            Object.entries(columns).forEach(([col, roomIndices]) => {
+                const colNum = parseInt(col);
+                const x = H_GAP + colNum * (BOX_W + H_GAP);
+                const totalColHeight = roomIndices.length * BOX_H + (roomIndices.length - 1) * V_GAP;
+                const startY = (canvasHeight - totalColHeight) / 2;
+
+                roomIndices.forEach((roomIdx, row) => {
+                    positions[roomIdx] = {
+                        x,
+                        y: startY + row * (BOX_H + V_GAP)
+                    };
+                });
+            });
+
+            return { positions, canvasWidth, canvasHeight };
+        }
+
         function drawLevel(level) {
             const canvas = document.getElementById("canvas");
             const ctx = canvas.getContext("2d");
@@ -262,23 +337,17 @@
 
             const BOX_W = 140;
             const BOX_H = 80;
-            const PADDING = 40;
 
-            // Resize canvas based on room count
-            canvas.width = Math.max(800, rooms.length * (BOX_W + PADDING) + PADDING);
-            canvas.height = 280;
+            const { positions, canvasWidth, canvasHeight } = computePositions(rooms, connections);
+
+            canvas.width = Math.max(800, canvasWidth);
+            canvas.height = Math.max(280, canvasHeight);
             canvas.style.display = "block";
             document.getElementById("legend").style.display = "flex";
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Calculate positions — lay rooms out horizontally
-            const positions = rooms.map((_, i) => ({
-                x: PADDING + i * (BOX_W + PADDING),
-                y: (canvas.height - BOX_H) / 2
-            }));
-
-            // Draw connections first (behind boxes)
+            // Draw connections
             ctx.strokeStyle = "#c8a96e";
             ctx.lineWidth = 2;
             connections.forEach(([a, b]) => {
@@ -313,12 +382,10 @@
                 const { x, y } = positions[i];
                 const color = ROOM_COLORS[room.type] || "#888";
 
-                // Box shadow glow
                 ctx.shadowColor = color;
                 ctx.shadowBlur = 12;
 
-                // Box fill
-                ctx.fillStyle = color + "33"; // semi-transparent fill
+                ctx.fillStyle = color + "33";
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 2;
                 ctx.beginPath();
@@ -327,29 +394,24 @@
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
-                // Room index
                 ctx.fillStyle = "#888";
                 ctx.font = "11px Courier New";
                 ctx.textAlign = "left";
                 ctx.fillText(`#${i}`, x + 8, y + 16);
 
-                // Mood emoji
                 ctx.font = "16px serif";
                 ctx.textAlign = "right";
                 ctx.fillText(MOOD_LABELS[room.mood] || "?", x + BOX_W - 8, y + 18);
 
-                // Room type
                 ctx.fillStyle = color;
                 ctx.font = "bold 13px Courier New";
                 ctx.textAlign = "center";
                 ctx.fillText(room.type.toUpperCase(), x + BOX_W / 2, y + BOX_H / 2 + 2);
 
-                // Enemies
                 ctx.fillStyle = "#aaa";
                 ctx.font = "10px Courier New";
                 ctx.fillText(room.enemies, x + BOX_W / 2, y + BOX_H / 2 + 18);
 
-                // Exits
                 ctx.fillStyle = "#666";
                 ctx.font = "10px Courier New";
                 ctx.textAlign = "right";
