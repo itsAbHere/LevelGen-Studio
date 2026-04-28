@@ -22,35 +22,46 @@ VALID_MOODS = {"tense", "dark", "dramatic", "calm", "eerie"}
 VALID_ENEMIES = {"none", "patrol", "guard", "swarm", "boss"}
 
 
-def generate_level(story_prompt: str) -> dict:
+def generate_level(story_prompt: str, max_retries: int = 2) -> dict:
     client = OpenAI(
         base_url="https://models.inference.ai.azure.com",
         api_key=os.getenv("GITHUB_TOKEN")
     )
 
-    print("  Sending prompt to GitHub Models (gpt-4o)...")
+    for attempt in range(max_retries):
+        print(f"  Sending prompt to GitHub Models (attempt {attempt + 1}/{max_retries})...")
 
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": build_user_prompt(story_prompt)}
-        ]
-    )
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": build_user_prompt(story_prompt)}
+            ]
+        )
 
-    raw_text = response.choices[0].message.content.strip()
+        raw_text = response.choices[0].message.content.strip()
 
-    # Defensive: strip accidental markdown fences
-    if raw_text.startswith("```"):
-        lines = raw_text.splitlines()
-        raw_text = "\n".join(lines[1:-1]) if lines[-1] == "```" else "\n".join(lines[1:])
+        if raw_text.startswith("```"):
+            lines = raw_text.splitlines()
+            raw_text = "\n".join(lines[1:-1]) if lines[-1] == "```" else "\n".join(lines[1:])
 
-    try:
-        level_data = json.loads(raw_text)
-    except json.JSONDecodeError as e:
-        raise ValueError(
-            f"LLM returned invalid JSON.\nError: {e}\nRaw output:\n{raw_text}"
-        ) from e
+        try:
+            level_data = json.loads(raw_text)
+        except json.JSONDecodeError as e:
+            if attempt < max_retries - 1:
+                print(f"  Invalid JSON, retrying...")
+                continue
+            raise ValueError(f"LLM returned invalid JSON.\nError: {e}\nRaw output:\n{raw_text}") from e
+
+        warnings = validate_level(level_data)
+        if not warnings:
+            return level_data
+
+        if attempt < max_retries - 1:
+            print(f"  Validation warnings on attempt {attempt + 1}, retrying: {warnings}")
+        else:
+            print(f"  Validation warnings persist after {max_retries} attempts, returning anyway.")
+            return level_data
 
     return level_data
 

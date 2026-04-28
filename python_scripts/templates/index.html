@@ -16,10 +16,89 @@
             color: #e0e0e0;
             font-family: 'Courier New', monospace;
             display: flex;
+            flex-direction: row;
+            min-height: 100vh;
+        }
+
+        /* ── Sidebar ── */
+        #sidebar {
+            width: 260px;
+            min-width: 260px;
+            background: #13131a;
+            border-right: 1px solid #2a2a3a;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+        }
+
+        #sidebar h2 {
+            color: #c8a96e;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            padding: 0 16px 12px;
+            border-bottom: 1px solid #2a2a3a;
+            margin-bottom: 8px;
+        }
+
+        #history-list {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .history-item {
+            padding: 10px 16px;
+            border-bottom: 1px solid #1e1e2a;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .history-item:hover {
+            background: #1a1a28;
+        }
+
+        .history-item.active {
+            background: #1e1e30;
+            border-left: 3px solid #c8a96e;
+        }
+
+        .history-item .h-title {
+            color: #c8a96e;
+            font-size: 0.78rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-item .h-meta {
+            color: #555;
+            font-size: 0.7rem;
+            margin-top: 3px;
+        }
+
+        .history-item .h-prompt {
+            color: #888;
+            font-size: 0.7rem;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-empty {
+            color: #444;
+            font-size: 0.75rem;
+            padding: 20px 16px;
+            text-align: center;
+        }
+
+        /* ── Main content ── */
+        #main {
+            flex: 1;
+            display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
             padding: 40px 20px;
+            overflow-x: auto;
         }
 
         h1 {
@@ -147,74 +226,131 @@
 
         #info-panel h2 {
             color: #c8a96e;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             font-size: 1rem;
+        }
+
+        #info-panel .archetype-tag {
+            display: inline-block;
+            background: #c8a96e22;
+            border: 1px solid #c8a96e55;
+            color: #c8a96e;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
         }
 
         #info-panel p {
             color: #aaa;
-            margin-bottom: 4px;
         }
     </style>
 </head>
 
 <body>
 
-    <h1>⚔ LEVELGEN STUDIO</h1>
-    <p class="subtitle">Narrative-aware level generation for indie games</p>
-
-    <div class="input-row">
-        <textarea id="prompt"
-            placeholder="abandoned castle, player is being hunted, 3 rooms, final room has a boss">abandoned castle, player is being hunted, 3 rooms, final room has a boss</textarea>
-        <button id="btn" onclick="generate()">GENERATE</button>
-    </div>
-
-    <div id="status"></div>
-
-    <canvas id="canvas" width="800" height="320"></canvas>
-
-    <div class="legend" id="legend">
-        <div class="legend-item">
-            <div class="legend-box" style="background:#4caf50"></div>entrance
-        </div>
-        <div class="legend-item">
-            <div class="legend-box" style="background:#5b8dd9"></div>standard
-        </div>
-        <div class="legend-item">
-            <div class="legend-box" style="background:#9e9e9e"></div>corridor
-        </div>
-        <div class="legend-item">
-            <div class="legend-box" style="background:#ffd54f"></div>treasure
-        </div>
-        <div class="legend-item">
-            <div class="legend-box" style="background:#e53935"></div>boss
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <h2>⏱ HISTORY</h2>
+        <div id="history-list">
+            <div class="history-empty">No levels generated yet</div>
         </div>
     </div>
 
-    <div id="info-panel">
-        <h2 id="level-title"></h2>
-        <p id="level-summary"></p>
+    <!-- Main -->
+    <div id="main">
+        <h1>⚔ LEVELGEN STUDIO</h1>
+        <p class="subtitle">Narrative-aware level generation for indie games</p>
+
+        <div class="input-row">
+            <textarea id="prompt"
+                placeholder="abandoned castle, player is being hunted, 3 rooms, final room has a boss">abandoned castle, player is being hunted, 3 rooms, final room has a boss</textarea>
+            <button id="btn" onclick="generate()">GENERATE</button>
+        </div>
+
+        <div id="status"></div>
+
+        <canvas id="canvas" width="800" height="320"></canvas>
+
+        <div class="legend" id="legend">
+            <div class="legend-item">
+                <div class="legend-box" style="background:#4caf50"></div>entrance
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background:#5b8dd9"></div>standard
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background:#9e9e9e"></div>corridor
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background:#ffd54f"></div>treasure
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background:#e53935"></div>boss
+            </div>
+        </div>
+
+        <div id="info-panel">
+            <h2 id="level-title"></h2>
+            <div class="archetype-tag" id="archetype-tag"></div>
+            <p id="level-summary"></p>
+        </div>
     </div>
 
     <script>
         const ROOM_COLORS = {
-            entrance: "#4caf50",
-            standard: "#5b8dd9",
-            corridor: "#9e9e9e",
-            treasure: "#ffd54f",
-            boss: "#e53935"
+            entrance: "#4caf50", standard: "#5b8dd9", corridor: "#9e9e9e",
+            treasure: "#ffd54f", boss: "#e53935"
         };
-
         const MOOD_LABELS = {
             tense: "⚡", dark: "🌑", dramatic: "💥", calm: "🌿", eerie: "👁"
         };
+
+        let activeHistoryId = null;
+
+        // Load history on page load
+        window.addEventListener("load", async () => {
+            const res = await fetch("/history");
+            const history = await res.json();
+            renderHistory(history);
+        });
+
+        function renderHistory(history) {
+            const list = document.getElementById("history-list");
+            if (!history.length) {
+                list.innerHTML = '<div class="history-empty">No levels generated yet</div>';
+                return;
+            }
+            list.innerHTML = history.map(entry => `
+      <div class="history-item ${entry.id === activeHistoryId ? 'active' : ''}"
+           onclick="loadFromHistory(${entry.id})">
+        <div class="h-title">${entry.level_title}</div>
+        <div class="h-meta">${entry.archetype} · ${entry.room_count} rooms · ${entry.timestamp}</div>
+        <div class="h-prompt">${entry.prompt}</div>
+      </div>
+    `).join("");
+        }
+
+        async function loadFromHistory(id) {
+            const res = await fetch("/history");
+            const history = await res.json();
+            const entry = history.find(e => e.id === id);
+            if (!entry) return;
+
+            activeHistoryId = id;
+            document.getElementById("prompt").value = entry.prompt;
+            setStatus("✓ Loaded from history", "success");
+            drawLevel(entry.level);
+            showInfo(entry.level);
+            renderHistory(history);
+        }
 
         async function generate() {
             const prompt = document.getElementById("prompt").value.trim();
             if (!prompt) return;
 
             const btn = document.getElementById("btn");
-            const status = document.getElementById("status");
             btn.disabled = true;
             setStatus("Generating level...", "");
 
@@ -227,10 +363,7 @@
 
                 const data = await res.json();
 
-                if (data.error) {
-                    setStatus("Error: " + data.error, "error");
-                    return;
-                }
+                if (data.error) { setStatus("Error: " + data.error, "error"); return; }
 
                 if (data.warnings && data.warnings.length > 0) {
                     setStatus("⚠ Warnings: " + data.warnings.join(" | "), "warning");
@@ -238,8 +371,13 @@
                     setStatus("✓ Level generated successfully", "success");
                 }
 
+                activeHistoryId = data.history_id;
                 drawLevel(data.level);
                 showInfo(data.level);
+
+                // Refresh history sidebar
+                const hRes = await fetch("/history");
+                renderHistory(await hRes.json());
 
             } catch (err) {
                 setStatus("Network error: " + err.message, "error");
@@ -255,59 +393,31 @@
         }
 
         function computePositions(rooms, connections) {
-            const BOX_W = 140;
-            const BOX_H = 80;
-            const H_GAP = 60;  // horizontal gap between columns
-            const V_GAP = 30;  // vertical gap between rows
-
-            // Build adjacency list
+            const BOX_W = 140, BOX_H = 80, H_GAP = 60, V_GAP = 30;
             const adj = Array.from({ length: rooms.length }, () => []);
             connections.forEach(conn => adj[conn.from].push(conn.to));
 
-            // BFS from room 0 to assign depth (column) to each room
             const depth = new Array(rooms.length).fill(-1);
             const queue = [];
-
-            // Find all entrance rooms as starting points
-            rooms.forEach((r, i) => {
-                if (r.type === "entrance") {
-                    depth[i] = 0;
-                    queue.push(i);
-                }
-            });
-
-            // If no entrance found, just start from 0
-            if (queue.length === 0) {
-                depth[0] = 0;
-                queue.push(0);
-            }
+            rooms.forEach((r, i) => { if (r.type === "entrance") { depth[i] = 0; queue.push(i); } });
+            if (queue.length === 0) { depth[0] = 0; queue.push(0); }
 
             let head = 0;
             while (head < queue.length) {
                 const node = queue[head++];
                 adj[node].forEach(neighbor => {
-                    if (depth[neighbor] === -1) {
-                        depth[neighbor] = depth[node] + 1;
-                        queue.push(neighbor);
-                    }
+                    if (depth[neighbor] === -1) { depth[neighbor] = depth[node] + 1; queue.push(neighbor); }
                 });
             }
 
-            // Any still unvisited rooms get placed at max depth + 1
             const maxDepth = Math.max(...depth.filter(d => d >= 0));
             depth.forEach((d, i) => { if (d === -1) depth[i] = maxDepth + 1; });
 
-            // Group rooms by depth
             const columns = {};
-            depth.forEach((d, i) => {
-                if (!columns[d]) columns[d] = [];
-                columns[d].push(i);
-            });
+            depth.forEach((d, i) => { if (!columns[d]) columns[d] = []; columns[d].push(i); });
 
-            // Assign x/y positions
             const positions = new Array(rooms.length);
             const numCols = Math.max(...Object.keys(columns).map(Number)) + 1;
-
             const canvasWidth = numCols * (BOX_W + H_GAP) + H_GAP;
             const maxColHeight = Math.max(...Object.values(columns).map(c => c.length));
             const canvasHeight = maxColHeight * (BOX_H + V_GAP) + V_GAP + 40;
@@ -317,12 +427,8 @@
                 const x = H_GAP + colNum * (BOX_W + H_GAP);
                 const totalColHeight = roomIndices.length * BOX_H + (roomIndices.length - 1) * V_GAP;
                 const startY = (canvasHeight - totalColHeight) / 2;
-
                 roomIndices.forEach((roomIdx, row) => {
-                    positions[roomIdx] = {
-                        x,
-                        y: startY + row * (BOX_H + V_GAP)
-                    };
+                    positions[roomIdx] = { x, y: startY + row * (BOX_H + V_GAP) };
                 });
             });
 
@@ -334,40 +440,44 @@
             const ctx = canvas.getContext("2d");
             const rooms = level.rooms;
             const connections = level.connections;
-
-            const BOX_W = 140;
-            const BOX_H = 80;
+            const BOX_W = 140, BOX_H = 80;
 
             const { positions, canvasWidth, canvasHeight } = computePositions(rooms, connections);
-
             canvas.width = Math.max(800, canvasWidth);
             canvas.height = Math.max(280, canvasHeight);
             canvas.style.display = "block";
             document.getElementById("legend").style.display = "flex";
-
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw connections
+            // Connections
             ctx.strokeStyle = "#c8a96e";
             ctx.lineWidth = 2;
             connections.forEach(conn => {
-                const a = conn.from;
-                const b = conn.to;
-                const from = positions[a];
-                const to = positions[b];
+                const a = conn.from, b = conn.to;
+                const from = positions[a], to = positions[b];
                 if (!from || !to) return;
 
-                const x1 = from.x + BOX_W;
-                const y1 = from.y + BOX_H / 2;
-                const x2 = to.x;
-                const y2 = to.y + BOX_H / 2;
+                const x1 = from.x + BOX_W, y1 = from.y + BOX_H / 2;
+                const x2 = to.x, y2 = to.y + BOX_H / 2;
+
+                // Dashed line for secret doors
+                if (conn.type === "secret_door") {
+                    ctx.setLineDash([5, 4]);
+                    ctx.strokeStyle = "#9b59b6";
+                } else if (conn.type === "trapdoor") {
+                    ctx.setLineDash([2, 3]);
+                    ctx.strokeStyle = "#e67e22";
+                } else {
+                    ctx.setLineDash([]);
+                    ctx.strokeStyle = "#c8a96e";
+                }
 
                 ctx.beginPath();
                 ctx.moveTo(x1, y1);
                 ctx.lineTo(x2, y2);
                 ctx.stroke();
+                ctx.setLineDash([]);
 
-                // Arrowhead
                 const angle = Math.atan2(y2 - y1, x2 - x1);
                 const alen = 10;
                 ctx.beginPath();
@@ -375,18 +485,16 @@
                 ctx.lineTo(x2 - alen * Math.cos(angle - 0.4), y2 - alen * Math.sin(angle - 0.4));
                 ctx.lineTo(x2 - alen * Math.cos(angle + 0.4), y2 - alen * Math.sin(angle + 0.4));
                 ctx.closePath();
-                ctx.fillStyle = "#c8a96e";
+                ctx.fillStyle = ctx.strokeStyle;
                 ctx.fill();
             });
 
-            // Draw room boxes
+            // Rooms
             rooms.forEach((room, i) => {
                 const { x, y } = positions[i];
                 const color = ROOM_COLORS[room.type] || "#888";
-
                 ctx.shadowColor = color;
                 ctx.shadowBlur = 12;
-
                 ctx.fillStyle = color + "33";
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 2;
@@ -424,11 +532,11 @@
         function showInfo(level) {
             const panel = document.getElementById("info-panel");
             document.getElementById("level-title").textContent = level.level_title;
+            document.getElementById("archetype-tag").textContent = level.archetype || "UNKNOWN";
             document.getElementById("level-summary").textContent = level.narrative_summary;
             panel.style.display = "block";
         }
 
-        // Allow Ctrl+Enter to generate
         document.getElementById("prompt").addEventListener("keydown", e => {
             if (e.key === "Enter" && e.ctrlKey) generate();
         });
