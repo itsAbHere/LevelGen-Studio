@@ -71,6 +71,15 @@ def save_level(level_data: dict, output_dir: str = "output", filename: Optional[
     return file_path
 
 
+VALID_ROOM_TYPES = {"entrance", "standard", "corridor", "treasure", "boss"}
+VALID_MOODS = {"tense", "dark", "dramatic", "calm", "eerie"}
+VALID_ENEMIES = {"none", "patrol", "guard", "swarm", "boss"}
+VALID_SIZES = {"small", "medium", "large"}
+VALID_SHAPES = {"rectangular", "circular", "irregular"}
+VALID_LIGHTING = {"bright", "dim", "dark", "flickering"}
+VALID_CONNECTION_TYPES = {"door", "hallway", "secret_door", "trapdoor"}
+
+
 def validate_level(level_data: dict) -> list[str]:
     warnings = []
     rooms = level_data.get("rooms", [])
@@ -83,34 +92,40 @@ def validate_level(level_data: dict) -> list[str]:
     room_count = len(rooms)
 
     for i, room in enumerate(rooms):
-        rtype = room.get("type")
-        mood = room.get("mood")
-        enemies = room.get("enemies")
-
-        if rtype not in VALID_ROOM_TYPES:
-            warnings.append(f"Room {i} has invalid type: '{rtype}'. Must be one of {VALID_ROOM_TYPES}")
-        if mood not in VALID_MOODS:
-            warnings.append(f"Room {i} has invalid mood: '{mood}'. Must be one of {VALID_MOODS}")
-        if enemies not in VALID_ENEMIES:
-            warnings.append(f"Room {i} has invalid enemies value: '{enemies}'. Must be one of {VALID_ENEMIES}")
+        if room.get("type") not in VALID_ROOM_TYPES:
+            warnings.append(f"Room {i} invalid type: '{room.get('type')}'")
+        if room.get("mood") not in VALID_MOODS:
+            warnings.append(f"Room {i} invalid mood: '{room.get('mood')}'")
+        if room.get("enemies") not in VALID_ENEMIES:
+            warnings.append(f"Room {i} invalid enemies: '{room.get('enemies')}'")
+        if room.get("size") not in VALID_SIZES:
+            warnings.append(f"Room {i} invalid size: '{room.get('size')}'")
+        if room.get("shape") not in VALID_SHAPES:
+            warnings.append(f"Room {i} invalid shape: '{room.get('shape')}'")
+        if room.get("lighting") not in VALID_LIGHTING:
+            warnings.append(f"Room {i} invalid lighting: '{room.get('lighting')}'")
 
     if rooms[0].get("type") != "entrance":
-        warnings.append(f"Room 0 should be type 'entrance', got '{rooms[0].get('type')}'")
+        warnings.append(f"Room 0 should be 'entrance', got '{rooms[0].get('type')}'")
 
     boss_rooms = [i for i, r in enumerate(rooms) if r.get("type") == "boss"]
     if len(boss_rooms) == 0:
         warnings.append("No boss room found.")
     elif len(boss_rooms) > 1:
-        warnings.append(f"Multiple boss rooms found at indices: {boss_rooms}")
+        warnings.append(f"Multiple boss rooms: {boss_rooms}")
 
     for conn in connections:
-        if not (isinstance(conn, list) and len(conn) == 2):
-            warnings.append(f"Invalid connection format: {conn}. Must be a pair like [0, 1]")
+        if not isinstance(conn, dict):
+            warnings.append(f"Connection should be an object, got: {conn}")
             continue
-        a, b = conn
-        if not (0 <= a < room_count):
-            warnings.append(f"Connection references out-of-range room index: {a}")
-        if not (0 <= b < room_count):
-            warnings.append(f"Connection references out-of-range room index: {b}")
+        a = conn.get("from")
+        b = conn.get("to")
+        ctype = conn.get("type")
+        if not (isinstance(a, int) and 0 <= a < room_count):
+            warnings.append(f"Connection 'from' out of range: {a}")
+        if not (isinstance(b, int) and 0 <= b < room_count):
+            warnings.append(f"Connection 'to' out of range: {b}")
+        if ctype not in VALID_CONNECTION_TYPES:
+            warnings.append(f"Invalid connection type: '{ctype}'")
 
     return warnings

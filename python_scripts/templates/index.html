@@ -262,7 +262,7 @@
 
             // Build adjacency list
             const adj = Array.from({ length: rooms.length }, () => []);
-            connections.forEach(([a, b]) => adj[a].push(b));
+            connections.forEach(conn => adj[conn.from].push(conn.to));
 
             // BFS from room 0 to assign depth (column) to each room
             const depth = new Array(rooms.length).fill(-1);
@@ -350,7 +350,9 @@
             // Draw connections
             ctx.strokeStyle = "#c8a96e";
             ctx.lineWidth = 2;
-            connections.forEach(([a, b]) => {
+            connections.forEach(conn => {
+                const a = conn.from;
+                const b = conn.to;
                 const from = positions[a];
                 const to = positions[b];
                 if (!from || !to) return;
