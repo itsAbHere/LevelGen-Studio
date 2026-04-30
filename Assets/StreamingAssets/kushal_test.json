@@ -1,0 +1,41 @@
+{
+  "level_title": "The Whispering Halls",
+  "theme": "haunted gothic",
+  "archetype": "HORROR DESCENT",
+  "narrative_summary": "The player enters a deceptively calm mansion foyer. As they venture deeper, the halls grow narrower and the whispers louder, until they face the malevolent presence at the heart of the estate.",
+  "rooms": [
+    {
+      "type": "entrance", "mood": "calm", "enemies": "none",
+      "size": "large", "shape": "rectangular", "lighting": "dim",
+      "objects": ["dusty_chandelier", "torn_portrait", "grand_staircase"],
+      "interactive_objects": ["front_door", "guest_book"],
+      "exits": 2
+    },
+    {
+      "type": "standard", "mood": "eerie", "enemies": "patrol",
+      "size": "medium", "shape": "irregular", "lighting": "flickering",
+      "objects": ["broken_mirror", "overturned_chair", "bloodstain"],
+      "interactive_objects": ["locked_cabinet"],
+      "exits": 2
+    },
+    {
+      "type": "treasure", "mood": "dark", "enemies": "none",
+      "size": "small", "shape": "rectangular", "lighting": "dark",
+      "objects": ["hidden_safe", "old_diary", "cobwebs"],
+      "interactive_objects": ["chest", "trap_switch"],
+      "exits": 1
+    },
+    {
+      "type": "boss", "mood": "dramatic", "enemies": "boss",
+      "size": "large", "shape": "circular", "lighting": "flickering",
+      "objects": ["ritual_circle", "floating_candles", "cracked_altar"],
+      "interactive_objects": ["altar"],
+      "exits": 1
+    }
+  ],
+  "connections": [
+    {"from": 0, "to": 1, "type": "door"},
+    {"from": 1, "to": 2, "type": "secret_door"},
+    {"from": 1, "to": 3, "type": "door"}
+  ]
+}

@@ -104,3 +104,21 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Plastic SCM
+plastic.changes
+plastic.selector
+plastic.wktree
+plastic.workspace
+*.plastic
+
+# Kenney and other imported assets metadata
+*.meta
+*.url
+*.txt.meta
+*.png.meta
+*.html.meta
+
+# Unity auto-generated
+*.pidb
+*.booproj

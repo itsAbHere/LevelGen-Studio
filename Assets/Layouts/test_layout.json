@@ -1,0 +1,7 @@
+{
+  "rooms": [
+    {"type": "entrance", "mood": "tense", "enemies": "none", "exits": 2},
+    {"type": "corridor", "mood": "dark", "enemies": "patrol", "exits": 2},
+    {"type": "boss_chamber", "mood": "dramatic", "enemies": "boss", "exits": 1}
+  ]
+}
